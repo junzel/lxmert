@@ -19,7 +19,7 @@ FAST_IMG_NUM = 5000
 # scene graph json file paths
 TRAIN_SCENE_GRAPHS = 'data/gqa/normalized_train_sceneGraphs.json'
 VAL_SCENE_GRAPHS = 'data/gqa/normalized_valid_sceneGraphs.json'
-
+GRAPH_MAPPING = 'data/gqa/graph_mapping.json'
 
 class GQADataset:
     """
