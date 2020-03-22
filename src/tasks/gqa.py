@@ -84,7 +84,7 @@ class GQA:
         best_valid = 0.
         for epoch in range(args.epochs):
             quesid2ans = {}
-            for i, (ques_id, feats, boxes, sent, target) in iter_wrapper(enumerate(loader)):
+            for i, (ques_id, feats, boxes, sent, target, scene_graph) in iter_wrapper(enumerate(loader)):
 
                 self.model.train()
                 self.optim.zero_grad()
@@ -132,7 +132,7 @@ class GQA:
         dset, loader, evaluator = eval_tuple
         quesid2ans = {}
         for i, datum_tuple in enumerate(loader):
-            ques_id, feats, boxes, sent = datum_tuple[:4]   # avoid handling target
+            ques_id, feats, boxes, sent, _ = datum_tuple[:4]   # avoid handling target
             with torch.no_grad():
                 feats, boxes = feats.cuda(), boxes.cuda()
                 logit = self.model(feats, boxes, sent)

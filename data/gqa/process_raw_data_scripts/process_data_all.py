@@ -13,7 +13,7 @@ split2name = {
 for split, name in split2name.items():
     new_data = []
     if split == 'train':
-        paths = list((path / 'train_all_questions').iterdir())
+        paths = list((path / 'train_all_questions').iterdir()) # list all files (full file path under '../data/train_all_questions/')
     else:
         paths = [path / ("%s_all_questions.json" % name)]
     print(split, paths)

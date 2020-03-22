@@ -16,6 +16,10 @@ from utils import load_obj_tsv
 TINY_IMG_NUM = 512
 FAST_IMG_NUM = 5000
 
+# scene graph json file paths
+TRAIN_SCENE_GRAPHS = 'data/gqa/normalized_train_sceneGraphs.json'
+VAL_SCENE_GRAPHS = 'data/gqa/normalized_valid_sceneGraphs.json'
+
 
 class GQADataset:
     """
@@ -110,6 +114,14 @@ class GQATorchDataset(Dataset):
         for img_datum in img_data:
             self.imgid2img[img_datum['img_id']] = img_datum
 
+        # Loading scene graphs to imgid2scenegraph
+        if 'testdev' in dataset.splits or 'testdv_all' in dataset.splits:
+            with open(VAL_SCENE_GRAPHS) as f:
+                self.imgid2scenegraph = json.load(f)
+        else:
+            with open(TRAIN_SCENE_GRAPHS) as f:
+                self.imgid2scenegraph = json.load(f)
+
         # Only kept the data with loaded image features
         self.data = []
         for datum in self.raw_dataset.data:
@@ -143,6 +155,9 @@ class GQATorchDataset(Dataset):
         np.testing.assert_array_less(boxes, 1+1e-5)
         np.testing.assert_array_less(-boxes, 0+1e-5)
 
+        # Get scene graph
+        scene_graph = self.imgid2scenegraph[img_id]
+
         # Create target
         if 'label' in datum:
             label = datum['label']
@@ -150,9 +165,9 @@ class GQATorchDataset(Dataset):
             for ans, score in label.items():
                 if ans in self.raw_dataset.ans2label:
                     target[self.raw_dataset.ans2label[ans]] = score
-            return ques_id, feats, boxes, ques, target
+            return ques_id, feats, boxes, ques, target, scene_graph
         else:
-            return ques_id, feats, boxes, ques
+            return ques_id, feats, boxes, ques, scene_graph
 
 
 class GQAEvaluator:
