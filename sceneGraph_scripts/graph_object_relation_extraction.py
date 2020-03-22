@@ -49,9 +49,9 @@ for split in splits:
     print("Object name list length:", len(obj_name_list))
     print("Number of unique object names:", len(obj_name_set))
    
-    pdb.set_trace()
+    # pdb.set_trace()
     
-    # mapping = {'object_names': list(obj_name_set), 'relations': list(relation_set)}
-    # with open('./{}_graph_mapping.json'.format(split), 'w') as f:
-    #    json.dump(mapping, f)
+    mapping = {'object_names': list(obj_name_set), 'relations': list(relation_set)}
+    with open('./{}_graph_mapping.json'.format(split), 'w') as f:
+        json.dump(mapping, f)
 
