@@ -1,6 +1,6 @@
 *.caffemodel
 *.tsv
 /snap
-/data/gqa
+/data/gqa/*.json
 /data/vqa
 /data/mscoco_imgfeat

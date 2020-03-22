@@ -94,13 +94,13 @@ class GQA:
                 assert logit.dim() == target.dim() == 2
                 if args.mce_loss:
                     max_value, target = target.max(1)
-                    loss = self.mce_loss(logit, target) * logit.size(1)
+                    loss = self.mce_loss(logit, target) * logit.size(1) # QUESTION: why times logit.size, not 32?
                 else:
                     loss = self.bce_loss(logit, target)
                     loss = loss * logit.size(1)
 
                 loss.backward()
-                nn.utils.clip_grad_norm_(self.model.parameters(), 5.)
+                nn.utils.clip_grad_norm_(self.model.parameters(), 5.) # QUESTION: necessary?
                 self.optim.step()
 
                 score, label = logit.max(1)
