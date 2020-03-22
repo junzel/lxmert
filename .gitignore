@@ -1,6 +1,7 @@
 *.caffemodel
 *.tsv
-/snap
-/data/gqa/*.json
-/data/vqa
-/data/mscoco_imgfeat
+snap
+data/gqa/*.json
+data/vqa
+data/mscoco_imgfeat
+sceneGraph_scripts/data/*.json
