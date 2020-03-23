@@ -117,24 +117,24 @@ def matching(predicted_bboxes, objects):
             h = float(objects[obj_id]['h'])
             obj_bbox = [x, y, x + w, y + h]
             ious[i, j] = bb_iou(predicted_bboxes[i], obj_bbox)
-        
+    # pdb.set_trace() 
     objects_keys = list(objects.keys())        
     for i in range(predicted_bboxes.shape[0]):
+        if objects_keys == []:
+            break
         max_iou = np.unravel_index(np.argmax(ious), ious.shape)
-
         obj_id = objects_keys[max_iou[1]]
         objects_keys.pop(max_iou[1])
 
         object_ids[max_iou[0]] = obj_id
-        ious = np.delete(ious, max_iou[1], 1)
-    
+        ious = np.delete(ious, max_iou[1], 1) 
     '''        
     ###return type:###   
     
     object_ids: list, length = 36, 返回每个predicted_bboxes对应的objects中的object_id (type: string)
             
     '''
-    
+    # pdb.set_trace()
     return object_ids
 
 def output_normalized_bboxes(img_data):
@@ -155,7 +155,7 @@ def relation_tensor(object_ids, scene_graph_objects, relation_mapping):
 
     """
     tensor = torch.zeros([36, 36, 311], dtype=torch.int32)
-    tesnor[:, :, -1] = 1
+    tensor[:, :, -1] = 1
     for idx, obj in enumerate(object_ids):
         if obj not in scene_graph_objects or obj == None:
             pass
@@ -207,7 +207,7 @@ def create_tensor():
         scene_graph_objects = scene_graph['objects']
         bboxes = output_normalized_bboxes(imgid2img[img_id])
         object_ids = matching(bboxes, scene_graph_objects)
-        tensor = relation_tensor(object_ids[img_id], scene_graph_objects, relation_mapping)
+        tensor = relation_tensor(object_ids, scene_graph_objects, relation_mapping)
         
         output[img_id] = tensor
 
