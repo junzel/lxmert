@@ -12,6 +12,46 @@ TRAIN_SCENE_GRAPHS = 'data/gqa/normalized_train_sceneGraphs.json'
 VAL_SCENE_GRAPHS = 'data/gqa/normalized_valid_sceneGraphs.json'
 GRAPH_MAPPING = 'data/gqa/graph_mapping.json'
 
+def load_obj_tsv(fname, topk=None):
+    """Load object features from tsv file.
+
+    :param fname: The path to the tsv file.
+    :param topk: Only load features for top K images (lines) in the tsv file.
+        Will load all the features if topk is either -1 or None.
+    :return: A list of image object features where each feature is a dict.
+        See FILENAMES above for the keys in the feature dict.
+    """
+    data = []
+    start_time = time.time()
+    print("Start to load Faster-RCNN detected objects from %s" % fname)
+    with open(fname) as f:
+        reader = csv.DictReader(f, FIELDNAMES, delimiter="\t")
+        for i, item in enumerate(reader):
+
+            for key in ['img_h', 'img_w', 'num_boxes']:
+                item[key] = int(item[key])
+            
+            boxes = item['num_boxes']
+            decode_config = [
+                ('objects_id', (boxes, ), np.int64),
+                ('objects_conf', (boxes, ), np.float32),
+                ('attrs_id', (boxes, ), np.int64),
+                ('attrs_conf', (boxes, ), np.float32),
+                ('boxes', (boxes, 4), np.float32),
+                ('features', (boxes, -1), np.float32),
+            ]
+            for key, shape, dtype in decode_config:
+                item[key] = np.frombuffer(base64.b64decode(item[key]), dtype=dtype)
+                item[key] = item[key].reshape(shape)
+                item[key].setflags(write=False)
+
+            data.append(item)
+            if topk is not None and len(data) == topk:
+                break
+    elapsed_time = time.time() - start_time
+    print("Loaded %d images in file %s in %d seconds." % (len(data), fname, elapsed_time))
+    return data
+
 def bb_iou(boxA, boxB):
     """Calculate the Intersection of Union of boxes from Faster RCNN and scene graph"""
     # determine the (x, y)-coordinates of the intersection rectangle
@@ -37,8 +77,60 @@ def bb_iou(boxA, boxB):
     # return the intersection over union value
     return iou
 
+def matching(predicted_bboxes, objects):
+    '''
+    ###input type:###
+    
+    ###对于每个img_id都有predicted_bboxes, objects###
+    
+    1. predicted_bboxes: numpy array, 36x4, 每张图faster rcnn predict出来的36个bbox
+    
+    2. objects: dict, scenegraph 中img_id包含所有的object
+        e.g.:
+            {'2716708'(object_id): 
+                {
+                    'name': 'nose',
+                    'attributes': [],
+                    'relations': [{'object': '2449847', 'name': 'of'},
+                               {'object': '2493560', 'name': 'to the right of'},
+                               {'object': '2370325', 'name': 'to the left of'}],
 
+                    'w': 7,
+                    'h': 9,
+                    'y': 54,
+                    'x': 370},
+            }
+            
+    '''
+    ious = np.zeros((predicted_bboxes.shape[0], len(objects)))
+    object_ids = [""]*predicted_bboxes.shape[0]
+    for i in range(predicted_bboxes.shape[0]):
+        for j, obj_id in enumerate(objects.keys()):
+            x = float(objects[obj_id]['x'])
+            y = float(objects[obj_id]['y'])
+            w = float(objects[obj_id]['w'])
+            h = float(objects[obj_id]['h'])
+            obj_bbox = [x, y, x + w, y + h]
+            ious[i, j] = bb_iou(predicted_bboxes[i], obj_bbox)
+        
+    objects_keys = list(objects.keys())        
+    for i in range(predicted_bboxes.shape[0]):
+        max_iou = np.unravel_index(np.argmax(ious), ious.shape)
 
+        obj_id = objects_keys[max_iou[1]]
+        objects_keys.pop(max_iou[1])
+
+        object_ids[max_iou[0]] = obj_id
+        ious = np.delete(ious, max_iou[1], 1)
+    
+    '''        
+    ###return type:###   
+    
+    object_ids: list, length = 36, 返回每个predicted_bboxes对应的objects中的object_id (type: string)
+            
+    '''
+    
+    return object_ids
 
 
 def relation_tensor(object_ids, scene_graph_objects, relation_mapping):
@@ -72,6 +164,15 @@ def create_tensor()
     parser = argparse.ArgumentParser()
     parser.add_argument("--split", choice=['train', 'valid'], default='train', type=str)
     args = parser.parse_args()
+
+    # Load output of Faster R-CNN
+    if args['split'] == 'valid':
+            path = "../data/vg_gqa_imgfeat/gqa_testdev_obj36.tsv"
+        else:
+            path = "../data/vg_gqa_imgfeat/vg_gqa_obj36.tsv"
+
+            key2data = load_obj_tsv(path)
+    pdb.set_trace()
 
     output = dict()
     # Loading scene graphs to imgid2scenegraph
