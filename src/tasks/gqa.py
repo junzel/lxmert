@@ -208,3 +208,17 @@ if __name__ == "__main__":
         gqa.train(gqa.train_tuple, gqa.valid_tuple)
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
