@@ -188,8 +188,8 @@ def create_tensor():
     img_data = load_obj_tsv(path)
     imgid2img = {}
     for img_datum in img_data:
-        imgid2img[img_datum['img_id']] = img_datum
-
+        imgid2img[img_datum['img_id']] = img_datum.copy()
+    del img_data
     output = dict()
     # Loading scene graphs to imgid2scenegraph
     if args.split == 'valid':
@@ -201,21 +201,35 @@ def create_tensor():
     with open(GRAPH_MAPPING) as f:
         graph_mapping = json.load(f)
     
-    relation_mapping = graph_mapping['relations']
+    relation_mapping = graph_mapping['relations'].copy()
 
+    del graph_mapping 
+
+
+    if not os.path.isdir('pairwise_relations'):
+        os.mkdir('pairwise_relations')
+    else:
+        os.rmdir('pairwise_relations')
+        os.mkdir('pairwise_relations')
+
+    print("Start making tensor")
     for img_id, scene_graph in imgid2scenegraph.items():
         scene_graph_objects = scene_graph['objects']
         bboxes = output_normalized_bboxes(imgid2img[img_id])
         object_ids = matching(bboxes, scene_graph_objects)
         tensor = relation_tensor(object_ids, scene_graph_objects, relation_mapping)
         
-        output[img_id] = tensor
+        saving_path = os.path.join("pairwise_relations", img_id+'.h5')
+        with h5py.File(saving_path) as f:
+            dataset = f.create_dataset(name='data', shape=tensor.shape, dtype='float32', data=tensor)
+        
+        # output[img_id] = tensor
 
-    pdb.set_trace()
-    with open('pairwise_relation_tensor.pkl') as f:
-        pickle.dump(output, f)
+    # print("Saving tensor to file")
+    # with open('pairwise_relation_tensor.pkl') as f:
+    #     pickle.dump(output, f)
 
-    return output
+    return 0
 
 if __name__ == "__main__":
     print("Hello")
