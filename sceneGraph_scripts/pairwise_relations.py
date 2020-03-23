@@ -3,14 +3,19 @@ import numpy as np
 import json
 import pdb
 import argparse
-
+import time
 import pickle
+import csv
+import sys, os
+import base64
 
-
+csv.field_size_limit(sys.maxsize)
+FIELDNAMES = ["img_id", "img_h", "img_w", "objects_id", "objects_conf",
+                      "attrs_id", "attrs_conf", "num_boxes", "boxes", "features"]
 # scene graph json file paths
-TRAIN_SCENE_GRAPHS = 'data/gqa/normalized_train_sceneGraphs.json'
-VAL_SCENE_GRAPHS = 'data/gqa/normalized_valid_sceneGraphs.json'
-GRAPH_MAPPING = 'data/gqa/graph_mapping.json'
+TRAIN_SCENE_GRAPHS = 'data/normalized_train_sceneGraphs.json'
+VAL_SCENE_GRAPHS = 'data/normalized_valid_sceneGraphs.json'
+GRAPH_MAPPING = 'data/graph_mapping.json'
 
 def load_obj_tsv(fname, topk=None):
     """Load object features from tsv file.
@@ -132,6 +137,16 @@ def matching(predicted_bboxes, objects):
     
     return object_ids
 
+def output_normalized_bboxes(img_data):
+    """Normalize bboxes to [0, 1]"""
+    # Normalize the boxes (to 0 ~ 1)
+    boxes = img_data['boxes'].copy()
+    img_h, img_w = img_data['img_h'], img_data['img_w']
+    boxes = boxes.copy()
+    boxes[:, (0, 2)] /= img_w
+    boxes[:, (1, 3)] /= img_h
+
+    return boxes
 
 def relation_tensor(object_ids, scene_graph_objects, relation_mapping):
     """
@@ -159,24 +174,25 @@ def relation_tensor(object_ids, scene_graph_objects, relation_mapping):
     return tensor
 
 
-def create_tensor()
+def create_tensor():
     """"""
     parser = argparse.ArgumentParser()
-    parser.add_argument("--split", choice=['train', 'valid'], default='train', type=str)
+    parser.add_argument("--split", choices=['train', 'valid'], default='train', type=str)
     args = parser.parse_args()
 
     # Load output of Faster R-CNN
-    if args['split'] == 'valid':
-            path = "../data/vg_gqa_imgfeat/gqa_testdev_obj36.tsv"
-        else:
-            path = "../data/vg_gqa_imgfeat/vg_gqa_obj36.tsv"
-
-            key2data = load_obj_tsv(path)
-    pdb.set_trace()
+    if args.split == 'valid':
+        path = "../data/vg_gqa_imgfeat/gqa_testdev_obj36.tsv"
+    else:
+        path = "../data/vg_gqa_imgfeat/vg_gqa_obj36.tsv"
+    img_data = load_obj_tsv(path)
+    imgid2img = {}
+    for img_datum in img_data:
+        imgid2img[img_datum['img_id']] = img_datum
 
     output = dict()
     # Loading scene graphs to imgid2scenegraph
-    if args['split'] == 'valid':
+    if args.split == 'valid':
         with open(VAL_SCENE_GRAPHS) as f:
             imgid2scenegraph = json.load(f)
     else:
@@ -186,19 +202,23 @@ def create_tensor()
         graph_mapping = json.load(f)
     
     relation_mapping = graph_mapping['relations']
-    scene_graph_objects = scene_graph['objects']
 
-    for img_id, scene_graph in imid2scenegraph.items():
+    for img_id, scene_graph in imgid2scenegraph.items():
+        scene_graph_objects = scene_graph['objects']
+        bboxes = output_normalized_bboxes(imgid2img[img_id])
+        object_ids = matching(bboxes, scene_graph_objects)
         tensor = relation_tensor(object_ids[img_id], scene_graph_objects, relation_mapping)
-        pdb.set_trace()
+        
         output[img_id] = tensor
 
+    pdb.set_trace()
     with open('pairwise_relation_tensor.pkl') as f:
         pickle.dump(output, f)
 
     return output
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+    print("Hello")
     _ = create_tensor()
 
 
