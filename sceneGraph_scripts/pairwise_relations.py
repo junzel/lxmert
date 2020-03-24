@@ -5,6 +5,7 @@ import pdb
 import argparse
 import time
 import pickle
+import h5py
 import csv
 import sys, os
 import base64
@@ -220,6 +221,8 @@ def create_tensor():
         tensor = relation_tensor(object_ids, scene_graph_objects, relation_mapping)
         
         saving_path = os.path.join("pairwise_relations", img_id+'.h5')
+        if os.path.isfile(saving_path):
+            os.remove(saving_path)
         with h5py.File(saving_path) as f:
             dataset = f.create_dataset(name='data', shape=tensor.shape, dtype='float32', data=tensor)
         
