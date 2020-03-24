@@ -182,7 +182,7 @@ def create_tensor():
     args = parser.parse_args()
 
     # Load output of Faster R-CNN
-    if args.split == 'valid':
+    if args.split == 'test':
         path = "../data/vg_gqa_imgfeat/gqa_testdev_obj36.tsv"
     else:
         path = "../data/vg_gqa_imgfeat/vg_gqa_obj36.tsv"
@@ -207,23 +207,27 @@ def create_tensor():
     del graph_mapping 
 
 
-    if not os.path.isdir('pairwise_relations'):
-        os.mkdir('pairwise_relations')
+    if not os.path.isdir('pairwise_relations/{}'.format(args.split)):
+        os.mkdir('pairwise_relations/{}'.format(args.split))
     else:
-        os.rmdir('pairwise_relations')
-        os.mkdir('pairwise_relations')
-
+        # os.rmdir('pairwise_relations/{}'.format(args.split))
+        # os.mkdir('pairwise_relations/{}'.format(args.split))
+        pass
+  
     print("Start making tensor")
     for img_id, scene_graph in imgid2scenegraph.items():
         scene_graph_objects = scene_graph['objects']
-        bboxes = output_normalized_bboxes(imgid2img[img_id])
+        try:
+            bboxes = output_normalized_bboxes(imgid2img[img_id])
+        except:
+            pdb.set_trace()
         object_ids = matching(bboxes, scene_graph_objects)
         tensor = relation_tensor(object_ids, scene_graph_objects, relation_mapping)
         
-        saving_path = os.path.join("pairwise_relations", img_id+'.h5')
+        saving_path = os.path.join("pairwise_relations/{}".format(args.split), img_id+'.h5')
         if os.path.isfile(saving_path):
             os.remove(saving_path)
-        with h5py.File(saving_path) as f:
+        with h5py.File(saving_path, 'w') as f:
             dataset = f.create_dataset(name='data', shape=tensor.shape, dtype='float32', data=tensor)
         
         # output[img_id] = tensor
